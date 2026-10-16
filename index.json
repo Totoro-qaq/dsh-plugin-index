@@ -1,0 +1,88 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Totoro's DSH plugins",
+    "zh": "Totoro 的 DSH 插件"
+  },
+  "description": {
+    "en": "Author-maintained releases of Jot and Bridge. This is not an official DSH market.",
+    "zh": "作者维护的 Jot 与 Bridge 已发布版本，不是 DSH 官方市场。"
+  },
+  "plugins": [
+    {
+      "name": "dsh-jot",
+      "title": {
+        "en": "Jot",
+        "zh": "随记 Jot"
+      },
+      "description": {
+        "en": "A memo beside your conversation. Edit text, checklists and tables, search, attach files and export. AI collaboration is off by default; turn it on when needed.",
+        "zh": "对话旁边的备忘录。支持直接编辑的文本、待办清单、表格、搜索、附件和导出。AI 协作默认关闭，需要时由用户开启。"
+      },
+      "author": "Totoro",
+      "homepage": "https://github.com/Totoro-qaq/dsh-jot#readme",
+      "repository": {
+        "url": "https://github.com/Totoro-qaq/dsh-jot"
+      },
+      "metadata": {
+        "keywords": [
+          "notes",
+          "checklist",
+          "tables",
+          "attachments",
+          "local-first"
+        ]
+      },
+      "versions": [
+        {
+          "version": "0.2.13",
+          "publishTimestamp": 1792050698,
+          "source": {
+            "type": "npm",
+            "registry": "https://registry.npmjs.org/"
+          },
+          "engines": {
+            "dsh": "^0.2.0-rc.2 || ^0.2.1-alpha.1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "dsh-plugin-bridge",
+      "title": {
+        "en": "Bridge",
+        "zh": "Bridge 会话交接"
+      },
+      "description": {
+        "en": "Preview and edit a handoff summary, then open a new conversation in another mode. Keep the original conversation without transferring old tool history.",
+        "zh": "先预览并编辑交接摘要，再切换模式开启新会话。原会话保留，不搬运旧工具历史。"
+      },
+      "author": "Totoro",
+      "homepage": "https://github.com/Totoro-qaq/dsh-plugin-bridge#readme",
+      "repository": {
+        "url": "https://github.com/Totoro-qaq/dsh-plugin-bridge"
+      },
+      "metadata": {
+        "keywords": [
+          "bridge",
+          "context-migration",
+          "agent-preset",
+          "session-migration"
+        ]
+      },
+      "versions": [
+        {
+          "version": "0.4.6",
+          "publishTimestamp": 1792121095,
+          "source": {
+            "type": "npm",
+            "registry": "https://registry.npmjs.org/"
+          },
+          "engines": {
+            "dsh": ">=0.1.0-rc.7 <0.2.0-0 || 0.2.0-rc.2 || 0.2.1-alpha.1 || 0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-alpha.4"
+          }
+        }
+      ]
+    }
+  ]
+}
