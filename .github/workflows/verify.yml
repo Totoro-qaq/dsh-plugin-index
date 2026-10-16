@@ -3,17 +3,47 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      pull_request:
+        description: 'Automation PR number (empty for ordinary repository checks)'
+        required: false
+        default: ''
+        type: string
+      head_sha:
+        description: 'Exact automation candidate SHA'
+        required: false
+        default: ''
+        type: string
 permissions:
   contents: read
+  pull-requests: read
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check ordinary changes
+        if: github.event_name != 'workflow_dispatch' || inputs.pull_request == ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Use trusted checker for an automation candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.pull_request != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
+          package-manager-cache: false
       - run: npm ci --ignore-scripts
       - run: npm run verify
       - run: npm run check -- --online
+      - name: Check exact candidate data without executing candidate code
+        if: github.event_name == 'workflow_dispatch' && inputs.pull_request != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pull_request }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: node src/automation-cli.mjs verify

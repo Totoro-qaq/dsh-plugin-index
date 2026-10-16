@@ -1,0 +1,42 @@
+name: Merge checked release index
+
+on:
+  workflow_run:
+    workflows: ['Verify reviewed index']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: index-checked-release-merge
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: >-
+      github.repository == 'Totoro-qaq/dsh-plugin-index' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'workflow_dispatch' &&
+      startsWith(github.event.workflow_run.head_branch, 'index/releases/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+      checks: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Revalidate and merge only the checked candidate SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node src/automation-cli.mjs merge
