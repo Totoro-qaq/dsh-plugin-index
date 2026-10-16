@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+.cache/
+.env
+.env.*
+*.log
+*.tmp
+private/
+artifacts/
+.DS_Store
