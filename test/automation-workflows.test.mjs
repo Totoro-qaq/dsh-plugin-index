@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 
-const workflow = name => fs.readFile(new URL(`../.github/workflows/${name}`, import.meta.url), 'utf8');
+const workflow = async name => (await fs.readFile(new URL(`../.github/workflows/${name}`, import.meta.url), 'utf8')).replace(/^\s*#.*$/gm, '');
 
 test('release synchronization is index-owned, bounded, scheduled and manually retryable', async () => {
   const source = await workflow('sync-releases.yml');
