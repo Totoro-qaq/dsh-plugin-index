@@ -31,8 +31,8 @@ async function fixture() {
     return new Response(JSON.stringify(source.packument));
   };
   const files = { 'plugins.json': serialize(config), 'index.json': serialize(await generateIndex(config, { fetchImpl })), 'README.md': 'prefix\n<!-- current-releases:start -->\nold table\n<!-- current-releases:end -->\nsuffix\n', 'releases.json': serialize({ schema: 1, packages: {} }) };
-  const state = { main: sha('a'), tree: sha('b'), head: sha('c'), branch: null, pr: null, files, candidate: null, calls: [], compareFiles: null, commitAuthor: 'github-actions[bot]', extraTree: [], jobs: [{ name: 'verify', status: 'completed', conclusion: 'success', head_sha: sha('c') }], run: null, changedHead: false, changedMain: false };
-  const tree = (candidate = false) => ({ truncated: false, tree: [...Object.keys(files).map(path => ({ path, type: 'blob', mode: '100644', sha: candidate && state.candidate?.[path] !== files[path] ? sha('d') : sha('e') })), { path: 'src/index.mjs', mode: '100644', type: 'blob', sha: sha('f') }, ...(candidate ? state.extraTree : [])] });
+  const state = { main: sha('a'), tree: sha('b'), head: sha('c'), branch: null, pr: null, files, candidate: null, calls: [], compareFiles: null, commitAuthor: 'github-actions[bot]', extraTree: [], candidateMode: '100644', jobs: [{ name: 'verify', status: 'completed', conclusion: 'success', head_sha: sha('c') }], run: null, changedHead: false, changedMain: false, mainReads: 0, advanceMainAfter: null, mergeResult: { merged: true, sha: sha('7') } };
+  const tree = (candidate = false) => ({ truncated: false, tree: [...Object.keys(files).map(path => ({ path, type: 'blob', mode: candidate ? state.candidateMode : '100644', sha: candidate && state.candidate?.[path] !== files[path] ? sha('d') : sha('e') })), { path: 'src/index.mjs', mode: '100644', type: 'blob', sha: sha('f') }, ...(candidate ? state.extraTree : [])] });
   const github = async (request, options = {}) => {
     state.calls.push({ request, ...options });
     const method = options.method ?? 'GET';
@@ -50,7 +50,7 @@ async function fixture() {
     }
     const route = url.pathname.slice(('/' + base).length);
     if (method === 'GET') {
-      if (route === '/git/ref/heads/main') return { ref: 'refs/heads/main', object: { type: 'commit', sha: state.changedMain ? sha('9') : state.main } };
+      if (route === '/git/ref/heads/main') { state.mainReads++; return { ref: 'refs/heads/main', object: { type: 'commit', sha: state.changedMain || state.mainReads === state.advanceMainAfter ? sha('9') : state.main } }; }
       if (route.startsWith('/git/ref/heads/')) return state.branch ? { ref: 'refs/heads/' + state.branch, object: { type: 'commit', sha: state.head } } : null;
       if (route.startsWith('/git/commits/')) return { sha: route.split('/').at(-1), tree: { sha: state.tree } };
       if (route.startsWith('/contents/')) {
@@ -77,7 +77,7 @@ async function fixture() {
       return clone(state.pr);
     }
     if (route === '/actions/workflows/verify.yml/dispatches') return null;
-    if (route === '/pulls/7/merge') return { merged: true, sha: sha('7') };
+    if (route === '/pulls/7/merge') return clone(state.mergeResult);
     if (route.startsWith('/git/refs/heads/') && method === 'DELETE') return null;
     throw new Error('unexpected index route ' + method + ' ' + request);
   };
@@ -148,6 +148,7 @@ for (const [label, mutate] of [
   ['renamed file', state => { state.compareFiles = [{ filename: 'index.json', previous_filename: 'other', status: 'renamed' }]; }],
   ['tampered candidate', state => { state.candidate['index.json'] += ' '; }],
   ['hidden tree file', state => { state.extraTree.push({ path: '.github/workflows/evil.yml', mode: '100644', type: 'blob', sha: sha('6') }); }],
+  ['executable metadata', state => { state.candidateMode = '100755'; }],
 ]) test('verification rejects ' + label, async () => {
   const options = await proposed();
   mutate(options.state);
@@ -162,6 +163,10 @@ test('rejects unsafe arguments and malformed or duplicated README markers', asyn
   for (const number of [0, -1, '7', 1.2]) await assert.rejects(module.verifyPullRequest({ ...options, number, headSha: sha('c') }));
   for (const headSha of ['short', sha('A'), null]) await assert.rejects(module.verifyPullRequest({ ...options, number: 7, headSha }));
   options.state.files['README.md'] = 'no markers';
+  await assert.rejects(module.proposeUpdate(options), /marker/i);
+  options.state.files['README.md'] = '<!-- current-releases:end --><!-- current-releases:start -->';
+  await assert.rejects(module.proposeUpdate(options), /marker/i);
+  options.state.files['README.md'] = '<!-- current-releases:start --><!-- current-releases:start --><!-- current-releases:end -->';
   await assert.rejects(module.proposeUpdate(options), /marker/i);
   assert.deepEqual(mutations(options.state), []);
 });
@@ -211,4 +216,24 @@ for (const [label, mutate] of [
   mutate(options.state);
   await assert.rejects((await load()).mergeVerifiedRun({ ...options, runId: 900 }));
   assert.deepEqual(mutations(options.state), []);
+});
+
+test('merge stops if main advances after candidate regeneration', async () => {
+  const options = await readyRun();
+  options.state.advanceMainAfter = options.state.mainReads + 2;
+  await assert.rejects((await load()).mergeVerifiedRun({ ...options, runId: 900 }), /main changed/i);
+  assert.deepEqual(mutations(options.state), []);
+});
+
+test('does not delete a branch when GitHub refuses the merge', async () => {
+  const options = await readyRun();
+  options.state.mergeResult = { merged: false };
+  await assert.rejects((await load()).mergeVerifiedRun({ ...options, runId: 900 }), /confirm/i);
+  assert.equal(mutations(options.state).some(call => call.method === 'DELETE'), false);
+});
+
+test('requires positive numeric workflow run IDs before making network requests', async () => {
+  const options = await fixture();
+  for (const runId of [0, -1, '900', 2.4]) await assert.rejects((await load()).mergeVerifiedRun({ ...options, runId }));
+  assert.deepEqual(options.state.calls, []);
 });
