@@ -1,4 +1,23 @@
 {
   "schema": 1,
-  "packages": {}
+  "packages": {
+    "dsh-jot": {
+      "version": "0.2.13",
+      "repository": "Totoro-qaq/dsh-jot",
+      "tag": "v0.2.13",
+      "commit": "c4e8dae0a37d75ca9c8d12fd736ba48b6d7202b4",
+      "publishRunId": 38701356701,
+      "publishRunUrl": "https://github.com/Totoro-qaq/dsh-jot/actions/runs/38701356701",
+      "integrity": "sha512-e6BXxk4epSYenDC5DrMZQpoONOhZUgHpGMrwwjSeF7rgYRYn5L6Glgy11kUoai8wrFe05Yp7vkMJ9B1q96GbVA=="
+    },
+    "dsh-plugin-bridge": {
+      "version": "0.4.6",
+      "repository": "Totoro-qaq/dsh-plugin-bridge",
+      "tag": "v0.4.6",
+      "commit": "c16a1aafa5bbe8cdc636a1ce7a7cdefb06303fcd",
+      "publishRunId": 38845196430,
+      "publishRunUrl": "https://github.com/Totoro-qaq/dsh-plugin-bridge/actions/runs/38845196430",
+      "integrity": "sha512-bE1SDKPqt0+2f+HDhfSNLUvID50DcySo8+gQxtPu7YfHXj6p6peQuboa97ljUw+PQrhLvPWXnMkd1/e5hNJw1Q=="
+    }
+  }
 }
