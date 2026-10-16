@@ -45,3 +45,11 @@ test('automation CLI reads only a bounded workflow-run event for merge mode', as
     operations: { mergeVerifiedRun: async options => { assert.equal(options.runId, 123); return { merged: true }; } } });
   assert.deepEqual(result, { merged: true });
 });
+
+test('automation CLI accepts the explicit merge-notification run ID for independent revalidation', async () => {
+  const { runAutomation } = await load();
+  const result = await runAutomation(['merge'], { github, env: { GITHUB_EVENT_PATH: '/event.json' }, log() {},
+    readFile: async () => JSON.stringify({ inputs: { run_id: '456' } }),
+    operations: { mergeVerifiedRun: async options => { assert.equal(options.runId, 456); return { merged: true }; } } });
+  assert.deepEqual(result, { merged: true });
+});
