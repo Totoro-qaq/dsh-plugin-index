@@ -9,7 +9,7 @@
     "check": "node src/cli.mjs check",
     "test": "node --test test/*.test.mjs",
     "test:coverage": "node --experimental-test-coverage --test-coverage-include='src/*.mjs' --test-coverage-lines=80 --test-coverage-branches=80 --test-coverage-functions=80 --test test/*.test.mjs",
-    "lint": "node --check src/index.mjs && node --check src/cli.mjs",
+    "lint": "node --check src/index.mjs && node --check src/cli.mjs && node --check src/releases.mjs && node --check src/github.mjs && node --check src/automation.mjs && node --check src/automation-cli.mjs",
     "verify": "npm run lint && npm run test:coverage && npm run check"
   },
   "devDependencies": {
