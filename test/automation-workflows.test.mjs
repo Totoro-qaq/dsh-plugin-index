@@ -34,6 +34,21 @@ test('human and fork metadata-only PRs still receive the required verification c
   assert.doesNotMatch(source, /paths-ignore:/);
 });
 
+test('successful bot candidate checks explicitly dispatch the main merge workflow', async () => {
+  const source = await workflow('verify.yml');
+  assert.match(source, /request-merge:\n\s+needs: verify/);
+  assert.match(source, /actions: write/);
+  assert.match(source, /startsWith\(github\.ref, 'refs\/heads\/index\/releases\/'\)/);
+  assert.match(source, /gh workflow run merge-releases\.yml/);
+  assert.match(source, /--ref main/);
+  assert.match(source, /VERIFY_RUN_ID: \$\{\{ github\.run_id \}\}/);
+  const merge = await workflow('merge-releases.yml');
+  assert.match(merge, /workflow_dispatch:\n\s+inputs:\n\s+run_id:/);
+  assert.match(merge, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(merge, /timeout 55s gh run watch/);
+  assert.match(merge, /--exit-status/);
+});
+
 test('automatic merging requires a successful verification workflow and never checks out candidate code', async () => {
   const source = await workflow('merge-releases.yml');
   assert.match(source, /workflow_run:/);
