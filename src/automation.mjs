@@ -113,8 +113,11 @@ async function inspectChanges(github, snapshot, pr) {
   const files = await pages(github, `${BASE}/pulls/${pr.number}/files`);
   ensure(files.length > 0 && files.length <= FILES.length && new Set(files.map(file => file.filename)).size === files.length, 'Unexpected pull request file count');
   for (const file of files) ensure(FILES.includes(file.filename) && ['added', 'modified'].includes(file.status) && !file.previous_filename, 'Only metadata additions or modifications may be automated');
+  const comparison = await github(`${BASE}/compare/${snapshot.sha}...${pr.head.sha}`);
+  const mergeBase = comparison?.merge_base_commit?.sha;
+  ensure(SHA.test(mergeBase), 'A valid actual pull request merge base is required');
   const [original, candidate] = await Promise.all([
-    github(`${BASE}/git/trees/${snapshot.sha}?recursive=1`),
+    github(`${BASE}/git/trees/${mergeBase}?recursive=1`),
     github(`${BASE}/git/trees/${pr.head.sha}?recursive=1`),
   ]);
   const map = response => {
@@ -134,6 +137,7 @@ async function inspectChanges(github, snapshot, pr) {
     if (FILES.includes(path)) ensure(right?.type === 'blob' && right.mode === '100644', 'Metadata files must be regular non-executable files');
     else ensure(left && right && left.sha === right.sha && left.mode === right.mode && left.type === right.type, 'Unexpected non-metadata tree change: ' + path);
   }
+  return { mergeBase };
 }
 
 async function dispatchVerification(github, pr) {
@@ -154,9 +158,9 @@ export async function proposeUpdate({ github, fetchImpl = fetch }) {
     ensure(pr && ref.ref === 'refs/heads/' + expected.branch && ref.object?.type === 'commit' && ref.object.sha === pr.head.sha, 'Existing branch must belong to its exact automation pull request');
     const commit = await github(`${BASE}/commits/${pr.head.sha}`);
     ensure(commit?.author?.login === BOT, 'Existing branch head author must be the bot');
-    await inspectChanges(github, snapshot, pr);
+    const inspection = await inspectChanges(github, snapshot, pr);
     const current = await filesAt(github, pr.head.sha);
-    if (FILES.every(path => current[path] === expected.files[path])) return dispatchVerification(github, pr);
+    if (inspection.mergeBase === snapshot.sha && FILES.every(path => current[path] === expected.files[path])) return dispatchVerification(github, pr);
     parents = [...new Set([pr.head.sha, snapshot.sha])];
   } else ensure(pr === null, 'Existing pull request has no matching branch');
   const tree = await github(`${BASE}/git/trees`, { method: 'POST', body: { base_tree: snapshot.treeSha, tree: FILES.map(path => ({ path, mode: '100644', type: 'blob', content: expected.files[path] })) } });
@@ -205,6 +209,8 @@ export async function mergeVerifiedRun({ github, fetchImpl = fetch, runId }) {
   validatePr(await github(`${BASE}/pulls/${pr.number}`), { number: pr.number, headSha: evidence.headSha, branch: evidence.branch });
   const result = await github(`${BASE}/pulls/${pr.number}/merge`, { method: 'PUT', body: { merge_method: 'squash', sha: evidence.headSha, commit_title: 'chore: update verified published plugin index' } });
   ensure(result?.merged === true && SHA.test(result.sha), 'GitHub did not confirm the verified merge');
-  await github(`${BASE}/git/refs/heads/${evidence.branch}`, { method: 'DELETE' });
-  return { merged: true, number: pr.number, sha: result.sha, url: pr.html_url };
+  const ref = await github(`${BASE}/git/ref/heads/${evidence.branch}`, { allow404: true });
+  const unchanged = ref?.ref === 'refs/heads/' + evidence.branch && ref.object?.type === 'commit' && ref.object.sha === evidence.headSha;
+  if (unchanged) await github(`${BASE}/git/refs/heads/${evidence.branch}`, { method: 'DELETE' });
+  return { merged: true, number: pr.number, sha: result.sha, url: pr.html_url, branchDeleted: unchanged };
 }
