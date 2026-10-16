@@ -54,3 +54,22 @@ its bot-authored head and four metadata files, then either open its PR or remove
 that exact branch after confirming it contains no human work. Rerunning the
 proposer then either reuses that PR or recreates the proposal. Never delete a
 branch simply because its name has the automation prefix.
+
+## Required-check reporting for dispatch verification
+
+Live deployment exposed a GitHub integration gap: the successful explicitly
+dispatched verification check was not attached to the bot PR's required-check
+rollup, so protected merge returned HTTP 405. Four regression cases first failed:
+the successful path did not report its exact-head status, and mismatched status
+state, context or run URL did not block merge.
+
+The merge coordinator now reports the fixed `verify` commit-status context only
+after the real workflow and verify job succeeded, metadata was independently
+regenerated, and current main and PR head were checked again. Its target is the
+exact successful verification run URL in this index repository. The GitHub API
+must confirm the expected state, context and target URL before merge is attempted.
+Failed, stale, skipped, foreign and tampered candidates still produce no status
+write. This is reporting existing successful evidence, not converting a failed or
+missing check into success. Strict up-to-date branch protection remains required
+for races after this final validation. Only the merge coordinator needs
+`statuses: write`; the verifier remains read-only.
