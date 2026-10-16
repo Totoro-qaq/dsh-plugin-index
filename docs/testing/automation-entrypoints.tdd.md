@@ -29,6 +29,12 @@ The workflow tests verify the 15-minute schedule, manual retry, read-only
 candidate checks against trusted main, exact-candidate dispatch inputs and a
 successful verification event before a privileged merge job can run.
 
+Independent review identified that a blanket metadata `paths-ignore` would
+leave fork README/pin-only PRs without the required check. A new regression
+first failed (3/4 workflow tests passed), then the filter was removed and the
+same target passed 4/4. Bot candidates still receive an explicit dispatch;
+ordinary human/fork PR verification remains enabled for every path.
+
 Independent runtime regeneration and mutation-guard tests live in
 `release-eligibility.tdd.md` and `index-automation.tdd.md`. Unit/static checks do
 not claim that GitHub Actions has already created or merged a PR; deployment

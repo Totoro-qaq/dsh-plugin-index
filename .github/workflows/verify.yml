@@ -2,13 +2,6 @@ name: Verify reviewed index
 on:
   push:
   pull_request:
-    # Data-only bot PRs use explicit dispatch, not approval-dependent bot events.
-    # Human pushes still run the full checks, including these four paths.
-    paths-ignore:
-      - 'plugins.json'
-      - 'index.json'
-      - 'README.md'
-      - 'releases.json'
   workflow_dispatch:
     inputs:
       pull_request:
