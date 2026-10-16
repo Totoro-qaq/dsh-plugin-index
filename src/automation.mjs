@@ -207,6 +207,14 @@ export async function mergeVerifiedRun({ github, fetchImpl = fetch, runId }) {
   const current = await github(`${BASE}/git/ref/heads/main`);
   ensure(current?.object?.sha === evidence.baseSha, 'Trusted main changed during verification; retry on the fresh base');
   validatePr(await github(`${BASE}/pulls/${pr.number}`), { number: pr.number, headSha: evidence.headSha, branch: evidence.branch });
+  // Dispatch-only check runs may not attach to a PR's required-check rollup.
+  // Report only the real, independently revalidated successful exact-head run.
+  const targetUrl = `https://github.com/${REPOSITORY}/actions/runs/${runId}`;
+  const status = await github(`${BASE}/statuses/${evidence.headSha}`, {
+    method: 'POST',
+    body: { state: 'success', context: 'verify', target_url: targetUrl, description: 'Exact release index verified and regenerated' },
+  });
+  ensure(status?.state === 'success' && status.context === 'verify' && status.target_url === targetUrl, 'GitHub did not confirm the exact verification status');
   const result = await github(`${BASE}/pulls/${pr.number}/merge`, { method: 'PUT', body: { merge_method: 'squash', sha: evidence.headSha, commit_title: 'chore: update verified published plugin index' } });
   ensure(result?.merged === true && SHA.test(result.sha), 'GitHub did not confirm the verified merge');
   const ref = await github(`${BASE}/git/ref/heads/${evidence.branch}`, { allow404: true });

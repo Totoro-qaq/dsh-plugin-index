@@ -52,6 +52,19 @@ The implicit `workflow_run` trigger is removed rather than kept as a fallback,
 so a human retry cannot accidentally request two competing merge continuations.
 Its removal was also checked RED (4/5 workflow tests) then GREEN (5/5).
 
+The next real attempt reached merge run `38859032500`, but GitHub returned HTTP
+405 under the unchanged strict `verify` protection. Exact-head check runs were
+successful while the PR rollup was empty and combined commit status was pending
+with no statuses. The merge coordinator now reports the already independently
+validated successful run to the same exact commit using a fixed `verify` status
+and actual run URL, checks the response, and only then requests the existing
+SHA-bound merge. Only that merge job gains `statuses: write`; candidate checking
+stays read-only. The permission regression first failed (5/6 workflow tests),
+then passed (6/6). Failed or stale checks do not produce a success status.
+This reports real evidence to GitHub; it does not weaken branch protection or
+replace tests with a synthetic pass. Final acceptance still requires the bot PR
+to merge automatically under those original protection settings.
+
 Independent runtime regeneration and mutation-guard tests live in
 `release-eligibility.tdd.md` and `index-automation.tdd.md`. Unit/static checks do
 not claim that GitHub Actions has already created or merged a PR; deployment
