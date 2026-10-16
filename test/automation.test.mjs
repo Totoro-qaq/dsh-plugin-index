@@ -31,8 +31,12 @@ async function fixture() {
     return new Response(JSON.stringify(source.packument));
   };
   const files = { 'plugins.json': serialize(config), 'index.json': serialize(await generateIndex(config, { fetchImpl })), 'README.md': 'prefix\n<!-- current-releases:start -->\nold table\n<!-- current-releases:end -->\nsuffix\n', 'releases.json': serialize({ schema: 1, packages: {} }) };
-  const state = { main: sha('a'), tree: sha('b'), head: sha('c'), branch: null, pr: null, files, candidate: null, calls: [], compareFiles: null, commitAuthor: 'github-actions[bot]', extraTree: [], candidateMode: '100644', jobs: [{ name: 'verify', status: 'completed', conclusion: 'success', head_sha: sha('c') }], run: null, changedHead: false, changedMain: false, mainReads: 0, advanceMainAfter: null, mergeResult: { merged: true, sha: sha('7') } };
-  const tree = (candidate = false) => ({ truncated: false, tree: [...Object.keys(files).map(path => ({ path, type: 'blob', mode: candidate ? state.candidateMode : '100644', sha: candidate && state.candidate?.[path] !== files[path] ? sha('d') : sha('e') })), { path: 'src/index.mjs', mode: '100644', type: 'blob', sha: sha('f') }, ...(candidate ? state.extraTree : [])] });
+  const state = { main: sha('a'), mergeBase: sha('a'), mainCode: sha('f'), candidateCode: sha('f'), tree: sha('b'), head: sha('c'), branch: null, pr: null, files, candidate: null, calls: [], compareFiles: null, commitAuthor: 'github-actions[bot]', extraTree: [], candidateMode: '100644', jobs: [{ name: 'verify', status: 'completed', conclusion: 'success', head_sha: sha('c') }], run: null, changedHead: false, changedMain: false, mainReads: 0, advanceMainAfter: null, mergeResult: { merged: true, sha: sha('7') }, afterMerge: false, branchShaAfterMerge: null };
+  const tree = (commit) => {
+    const candidate = commit === state.head;
+    const code = candidate ? state.candidateCode : commit === state.main ? state.mainCode : sha('f');
+    return { truncated: false, tree: [...Object.keys(files).map(path => ({ path, type: 'blob', mode: candidate ? state.candidateMode : '100644', sha: candidate && state.candidate?.[path] !== files[path] ? sha('d') : sha('e') })), { path: 'src/index.mjs', mode: '100644', type: 'blob', sha: code }, ...(candidate ? state.extraTree : [])] };
+  };
   const github = async (request, options = {}) => {
     state.calls.push({ request, ...options });
     const method = options.method ?? 'GET';
@@ -51,7 +55,7 @@ async function fixture() {
     const route = url.pathname.slice(('/' + base).length);
     if (method === 'GET') {
       if (route === '/git/ref/heads/main') { state.mainReads++; return { ref: 'refs/heads/main', object: { type: 'commit', sha: state.changedMain || state.mainReads === state.advanceMainAfter ? sha('9') : state.main } }; }
-      if (route.startsWith('/git/ref/heads/')) return state.branch ? { ref: 'refs/heads/' + state.branch, object: { type: 'commit', sha: state.head } } : null;
+      if (route.startsWith('/git/ref/heads/')) return state.branch ? { ref: 'refs/heads/' + state.branch, object: { type: 'commit', sha: state.afterMerge && state.branchShaAfterMerge ? state.branchShaAfterMerge : state.head } } : null;
       if (route.startsWith('/git/commits/')) return { sha: route.split('/').at(-1), tree: { sha: state.tree } };
       if (route.startsWith('/contents/')) {
         const source = url.searchParams.get('ref') === state.main ? state.files : state.candidate;
@@ -63,12 +67,13 @@ async function fixture() {
       if (route === '/pulls/7') return { ...clone(state.pr), head: { ...state.pr.head, sha: state.changedHead ? sha('8') : state.head } };
       if (route === '/pulls/7/files') return state.compareFiles ?? Object.keys(files).filter(path => state.candidate?.[path] !== files[path]).map(filename => ({ filename, status: 'modified' }));
       if (route.startsWith('/commits/')) return { author: { login: state.commitAuthor } };
-      if (route.startsWith('/git/trees/')) return tree(url.searchParams.get('recursive') === '1' && route.endsWith(state.head));
+      if (route.startsWith('/git/trees/')) return tree(route.split('/').at(-1));
+      if (route.startsWith('/compare/')) return { merge_base_commit: { sha: state.mergeBase } };
       if (route === '/actions/runs/900') return clone(state.run);
       if (route === '/actions/runs/900/jobs') return { jobs: clone(state.jobs) };
     }
     assert.ok(['POST', 'PATCH', 'PUT', 'DELETE'].includes(method));
-    if (route === '/git/trees') { state.candidate = Object.fromEntries(options.body.tree.map(file => [file.path, file.content])); return { sha: state.tree }; }
+    if (route === '/git/trees') { state.candidate = Object.fromEntries(options.body.tree.map(file => [file.path, file.content])); state.candidateCode = state.mainCode; return { sha: state.tree }; }
     if (route === '/git/commits') return { sha: state.head };
     if (route === '/git/refs' && method === 'POST') { state.branch = options.body.ref.slice('refs/heads/'.length); return { object: { sha: state.head } }; }
     if (route.startsWith('/git/refs/heads/') && method === 'PATCH') return { object: { sha: state.head } };
@@ -77,7 +82,7 @@ async function fixture() {
       return clone(state.pr);
     }
     if (route === '/actions/workflows/verify.yml/dispatches') return null;
-    if (route === '/pulls/7/merge') return clone(state.mergeResult);
+    if (route === '/pulls/7/merge') { state.afterMerge = true; return clone(state.mergeResult); }
     if (route.startsWith('/git/refs/heads/') && method === 'DELETE') return null;
     throw new Error('unexpected index route ' + method + ' ' + request);
   };
@@ -124,6 +129,29 @@ test('updates an owned bot branch with both existing head and current main paren
   await (await load()).proposeUpdate(options);
   const commit = mutations(options.state).find(call => call.request === base + '/git/commits');
   assert.deepEqual(commit.body.parents, [options.state.head, options.state.main]);
+});
+
+test('refreshes a pending bot PR after an unrelated main code change using its actual merge base', async () => {
+  const options = await proposed();
+  options.state.main = sha('9');
+  options.state.mainCode = sha('8');
+  options.state.calls = [];
+  const result = await (await load()).proposeUpdate(options);
+  assert.equal(result.number, 7);
+  const commit = mutations(options.state).find(call => call.request === base + '/git/commits');
+  assert.deepEqual(commit.body.parents, [options.state.head, options.state.main]);
+  assert.equal(options.state.candidateCode, options.state.mainCode);
+  assert.ok(options.state.calls.some(call => call.request === `${base}/git/trees/${options.state.mergeBase}?recursive=1`));
+});
+
+test('can independently verify metadata-only PR bytes while its base has advanced', async () => {
+  const options = await proposed();
+  options.state.main = sha('9');
+  options.state.mainCode = sha('8');
+  options.state.calls = [];
+  const evidence = await (await load()).verifyPullRequest({ ...options, number: 7, headSha: options.state.head });
+  assert.equal(evidence.baseSha, options.state.main);
+  assert.deepEqual(mutations(options.state), []);
 });
 
 test('verifies candidate bytes against trusted current main and successful publishers', async () => {
@@ -179,7 +207,9 @@ test('refuses to overwrite human commits or an orphan existing branch', async ()
   assert.deepEqual(mutations(options.state), []);
   options.state.commitAuthor = 'github-actions[bot]';
   options.state.pr = null;
+  options.state.calls = [];
   await assert.rejects((await load()).proposeUpdate(options), /existing|orphan|pull request/i);
+  assert.deepEqual(mutations(options.state), [], 'an interrupted branch-before-PR creation stays fail-closed');
 });
 
 async function readyRun() {
@@ -230,6 +260,15 @@ test('does not delete a branch when GitHub refuses the merge', async () => {
   options.state.mergeResult = { merged: false };
   await assert.rejects((await load()).mergeVerifiedRun({ ...options, runId: 900 }), /confirm/i);
   assert.equal(mutations(options.state).some(call => call.method === 'DELETE'), false);
+});
+
+test('retains an automation branch if its ref moved after the successful merge', async () => {
+  const options = await readyRun();
+  options.state.branchShaAfterMerge = sha('8');
+  const result = await (await load()).mergeVerifiedRun({ ...options, runId: 900 });
+  assert.equal(result.merged, true);
+  assert.equal(result.branchDeleted, false);
+  assert.deepEqual(mutations(options.state).map(call => call.method), ['PUT']);
 });
 
 test('requires positive numeric workflow run IDs before making network requests', async () => {
