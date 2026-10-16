@@ -31,7 +31,7 @@ async function fixture() {
     return new Response(JSON.stringify(source.packument));
   };
   const files = { 'plugins.json': serialize(config), 'index.json': serialize(await generateIndex(config, { fetchImpl })), 'README.md': 'prefix\n<!-- current-releases:start -->\nold table\n<!-- current-releases:end -->\nsuffix\n', 'releases.json': serialize({ schema: 1, packages: {} }) };
-  const state = { main: sha('a'), mergeBase: sha('a'), mainCode: sha('f'), candidateCode: sha('f'), tree: sha('b'), head: sha('c'), branch: null, pr: null, files, candidate: null, calls: [], compareFiles: null, commitAuthor: 'github-actions[bot]', extraTree: [], candidateMode: '100644', jobs: [{ name: 'verify', status: 'completed', conclusion: 'success', head_sha: sha('c') }], run: null, changedHead: false, changedMain: false, mainReads: 0, advanceMainAfter: null, mergeResult: { merged: true, sha: sha('7') }, afterMerge: false, branchShaAfterMerge: null };
+  const state = { main: sha('a'), mergeBase: sha('a'), mainCode: sha('f'), candidateCode: sha('f'), tree: sha('b'), head: sha('c'), branch: null, pr: null, files, candidate: null, calls: [], compareFiles: null, commitAuthor: 'github-actions[bot]', extraTree: [], candidateMode: '100644', jobs: [{ name: 'verify', status: 'completed', conclusion: 'success', head_sha: sha('c') }], run: null, changedHead: false, changedMain: false, mainReads: 0, advanceMainAfter: null, mergeResult: { merged: true, sha: sha('7') }, afterMerge: false, branchShaAfterMerge: null, statusResponse: null };
   const tree = (commit) => {
     const candidate = commit === state.head;
     const code = candidate ? state.candidateCode : commit === state.main ? state.mainCode : sha('f');
@@ -82,6 +82,7 @@ async function fixture() {
       return clone(state.pr);
     }
     if (route === '/actions/workflows/verify.yml/dispatches') return null;
+    if (route === `/statuses/${state.head}` && method === 'POST') return clone(state.statusResponse ?? options.body);
     if (route === '/pulls/7/merge') { state.afterMerge = true; return clone(state.mergeResult); }
     if (route.startsWith('/git/refs/heads/') && method === 'DELETE') return null;
     throw new Error('unexpected index route ' + method + ' ' + request);
@@ -224,10 +225,12 @@ test('merges only a successful verified current head, then deletes that exact au
   const result = await (await load()).mergeVerifiedRun({ ...options, runId: 900 });
   assert.equal(result.merged, true);
   const writes = mutations(options.state);
-  assert.deepEqual(writes.map(call => call.method), ['PUT', 'DELETE']);
-  assert.equal(writes[0].body.sha, options.state.head);
-  assert.equal(writes[0].body.merge_method, 'squash');
-  assert.equal(writes[1].request, `${base}/git/refs/heads/${options.result.branch}`);
+  assert.deepEqual(writes.map(call => call.method), ['POST', 'PUT', 'DELETE']);
+  assert.equal(writes[0].request, `${base}/statuses/${options.state.head}`);
+  assert.deepEqual(writes[0].body, { state: 'success', context: 'verify', target_url: `https://github.com/${repository}/actions/runs/900`, description: 'Exact release index verified and regenerated' });
+  assert.equal(writes[1].body.sha, options.state.head);
+  assert.equal(writes[1].body.merge_method, 'squash');
+  assert.equal(writes[2].request, `${base}/git/refs/heads/${options.result.branch}`);
 });
 
 for (const [label, mutate] of [
@@ -241,11 +244,23 @@ for (const [label, mutate] of [
   ['skipped verification', state => { state.jobs[0].conclusion = 'skipped'; }],
   ['duplicate verification jobs', state => { state.jobs.push(clone(state.jobs[0])); }],
   ['changed PR head', state => { state.changedHead = true; }],
+  ['tampered candidate metadata', state => { state.candidate['index.json'] += ' '; }],
 ]) test('merge refuses ' + label, async () => {
   const options = await readyRun();
   mutate(options.state);
   await assert.rejects((await load()).mergeVerifiedRun({ ...options, runId: 900 }));
   assert.deepEqual(mutations(options.state), []);
+});
+
+for (const [label, value] of [
+  ['state', { state: 'pending', context: 'verify', target_url: `https://github.com/${repository}/actions/runs/900` }],
+  ['context', { state: 'success', context: 'different', target_url: `https://github.com/${repository}/actions/runs/900` }],
+  ['run URL', { state: 'success', context: 'verify', target_url: `https://github.com/${repository}/actions/runs/901` }],
+]) test('does not merge when reported verification status has a mismatched ' + label, async () => {
+  const options = await readyRun();
+  options.state.statusResponse = value;
+  await assert.rejects((await load()).mergeVerifiedRun({ ...options, runId: 900 }), /status/i);
+  assert.deepEqual(mutations(options.state).map(call => call.method), ['POST']);
 });
 
 test('merge stops if main advances after candidate regeneration', async () => {
@@ -268,7 +283,7 @@ test('retains an automation branch if its ref moved after the successful merge',
   const result = await (await load()).mergeVerifiedRun({ ...options, runId: 900 });
   assert.equal(result.merged, true);
   assert.equal(result.branchDeleted, false);
-  assert.deepEqual(mutations(options.state).map(call => call.method), ['PUT']);
+  assert.deepEqual(mutations(options.state).map(call => call.method), ['POST', 'PUT']);
 });
 
 test('requires positive numeric workflow run IDs before making network requests', async () => {
