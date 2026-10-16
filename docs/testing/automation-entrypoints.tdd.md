@@ -35,6 +35,23 @@ first failed (3/4 workflow tests passed), then the filter was removed and the
 same target passed 4/4. Bot candidates still receive an explicit dispatch;
 ordinary human/fork PR verification remains enabled for every path.
 
+## Live-trigger regression
+
+The first real coordinator run `38858463469` created bot PR #2. The explicit
+candidate check `38858486372` passed, but no successor `workflow_run` merge
+appeared. This confirms that a bot-dispatched workflow cannot rely on that
+implicit continuation. No manual merge or workflow approval was used.
+
+Two new regression tests failed (8/10 entrypoint/workflow tests passed), then
+passed after adding an explicit, actions-only `request-merge` job. It dispatches
+the trusted-main merge workflow and immediately returns. The merge workflow
+waits at most 55 seconds for its parent verification to finish successfully,
+then the existing independent exact-SHA merge checks still run. It never waits
+in the notifying parent job, and does not use a PAT or bypass branch protection.
+The implicit `workflow_run` trigger is removed rather than kept as a fallback,
+so a human retry cannot accidentally request two competing merge continuations.
+Its removal was also checked RED (4/5 workflow tests) then GREEN (5/5).
+
 Independent runtime regeneration and mutation-guard tests live in
 `release-eligibility.tdd.md` and `index-automation.tdd.md`. Unit/static checks do
 not claim that GitHub Actions has already created or merged a PR; deployment
