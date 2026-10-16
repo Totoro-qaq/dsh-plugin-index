@@ -51,10 +51,11 @@ test('successful bot candidate checks explicitly dispatch the main merge workflo
 
 test('automatic merging requires a successful verification workflow and never checks out candidate code', async () => {
   const source = await workflow('merge-releases.yml');
-  assert.match(source, /workflow_run:/);
-  assert.match(source, /workflows: \['Verify reviewed index'\]/);
-  assert.match(source, /github\.event\.workflow_run\.conclusion == 'success'/);
-  assert.match(source, /github\.event\.workflow_run\.event == 'workflow_dispatch'/);
+  assert.match(source, /workflow_dispatch:/);
+  assert.doesNotMatch(source, /workflow_run:/);
+  assert.match(source, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(source, /timeout 55s gh run watch/);
+  assert.match(source, /--exit-status/);
   assert.match(source, /ref: main/);
   assert.match(source, /persist-credentials: false/);
   assert.match(source, /npm ci --ignore-scripts/);
