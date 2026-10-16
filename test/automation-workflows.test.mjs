@@ -20,14 +20,18 @@ test('release synchronization is index-owned, bounded, scheduled and manually re
 
 test('candidate checking is explicitly dispatched at the candidate SHA but executes trusted main code', async () => {
   const source = await workflow('verify.yml');
-  assert.match(source, /pull_request:\n\s+paths-ignore:/);
-  for (const file of ['plugins.json', 'index.json', 'README.md', 'releases.json']) assert.ok(source.includes(`'${file}'`));
+  assert.match(source, /\n  pull_request:/);
   assert.match(source, /pull_request:\n\s+description:/);
   assert.match(source, /head_sha:\n\s+description:/);
   assert.match(source, /ref: main/);
   assert.match(source, /node src\/automation-cli\.mjs verify/);
   assert.match(source, /contents: read/);
   assert.doesNotMatch(source, /contents: write|pull-requests: write|pull_request_target/);
+});
+
+test('human and fork metadata-only PRs still receive the required verification check', async () => {
+  const source = await workflow('verify.yml');
+  assert.doesNotMatch(source, /paths-ignore:/);
 });
 
 test('automatic merging requires a successful verification workflow and never checks out candidate code', async () => {
