@@ -1,0 +1,72 @@
+{
+  "checkedAtUTC": "2026-10-16T05:08:40.304Z",
+  "indexURL": "https://raw.githubusercontent.com/Totoro-qaq/dsh-plugin-index/main/index.json",
+  "scope": "Official alpha4 WebHost + Node22 + fixed pnpm11.26; not native Desktop",
+  "node": "v22.23.1",
+  "hostVersion": "0.2.1-alpha.4",
+  "pnpmVersion": "11.26.0",
+  "packageManagerExact": true,
+  "packages": {
+    "dsh-plugin-bridge": "0.4.6",
+    "dsh-jot": "0.2.13"
+  },
+  "bundles": [
+    {
+      "name": "dsh-jot",
+      "version": "0.2.13",
+      "enabled": true,
+      "installed": true
+    },
+    {
+      "name": "dsh-plugin-bridge",
+      "version": "0.4.6",
+      "enabled": true,
+      "installed": true
+    }
+  ],
+  "versionExemptions": {
+    "exemptions": {},
+    "warnings": []
+  },
+  "marketIndexes": [
+    {
+      "url": "https://raw.githubusercontent.com/Totoro-qaq/dsh-plugin-index/main/index.json",
+      "title": {
+        "en": "Totoro's DSH plugins",
+        "zh": "Totoro 的 DSH 插件"
+      },
+      "description": {
+        "en": "Author-maintained releases of Jot and Bridge. This is not an official DSH market.",
+        "zh": "作者维护的 Jot 与 Bridge 已发布版本，不是 DSH 官方市场。"
+      }
+    }
+  ],
+  "providerCredentialsSupplied": false,
+  "modelRequests": 0,
+  "doctor": {
+    "registered": true,
+    "passed": true,
+    "answer": {
+      "commandId": "cmd-11d03aab-1",
+      "result": {
+        "kind": "success",
+        "text": "Adapter: dsh-typed-controllers · 13/13 methods available\nCurrent preset: standard\nAvailable targets: ptc · minimal · cordis\nConfig: tier current · source 60000 chars · summary 2400 chars · goal 1 rounds · injection both"
+      }
+    },
+    "syntheticSessionOnly": true,
+    "modelRequests": 0
+  },
+  "jotAIstate": {
+    "status": 200,
+    "data": {
+      "data": {
+        "version": 1,
+        "notes": [],
+        "folders": [],
+        "agentEnabled": false,
+        "agentEdits": {}
+      }
+    },
+    "jotTools": []
+  }
+}

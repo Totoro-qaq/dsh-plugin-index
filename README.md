@@ -26,6 +26,8 @@ https://raw.githubusercontent.com/Totoro-qaq/dsh-plugin-index/main/index.json
 
 安装目标固定为 `dsh-jot@0.2.13` 和 `dsh-plugin-bridge@0.4.6`，registry 为 `https://registry.npmjs.org/`。宿主兼容范围和发布时间从这两个确切版本的 npm 元数据读取，DSH 在安装时会再次检查兼容性。
 
+已在全新的 DSH `0.2.1-alpha.4` 隔离 WebUI 中，从上面的公开地址完成添加源、安装和启用验收。Bridge doctor 为 13/13，Jot 页面可用且 AI 协作关闭。详见 [2026-10-16 验收记录](docs/acceptance-2026-10-16.md)；不将这轮 WebUI 结果扩展成原生桌面认证。
+
 ## 维护索引
 
 需要 Node.js 22 或更新版本：
