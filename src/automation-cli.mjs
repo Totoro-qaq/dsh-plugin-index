@@ -23,8 +23,9 @@ export async function runAutomation(args, {
     const bytes = await readFile(env.GITHUB_EVENT_PATH, 'utf8');
     if (Buffer.byteLength(bytes) > 2 * 1024 * 1024) throw new Error('Workflow event is too large');
     const event = JSON.parse(bytes);
-    if (!positiveInteger(event.workflow_run?.id)) throw new Error('A workflow-run event ID is required');
-    parameters = { runId: Number(event.workflow_run.id) };
+    const runId = event.workflow_run?.id ?? event.inputs?.run_id;
+    if (!positiveInteger(runId)) throw new Error('A workflow-run event ID is required');
+    parameters = { runId: Number(runId) };
   }
   const client = github ?? createGitHubClient({ token: env.GH_TOKEN });
   const handlers = operations ?? await import('./automation.mjs');

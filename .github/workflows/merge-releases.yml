@@ -1,9 +1,12 @@
 name: Merge checked release index
 
 on:
-  workflow_run:
-    workflows: ['Verify reviewed index']
-    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Exact successful candidate verification run to revalidate'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -16,9 +19,7 @@ jobs:
   merge:
     if: >-
       github.repository == 'Totoro-qaq/dsh-plugin-index' &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'workflow_dispatch' &&
-      startsWith(github.event.workflow_run.head_branch, 'index/releases/')
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -36,6 +37,15 @@ jobs:
           node-version: '22'
           package-manager-cache: false
       - run: npm ci --ignore-scripts
+      - name: Wait for the notifying verification run to finish successfully
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_RUN_ID: ${{ inputs.run_id }}
+        shell: bash
+        run: |
+          [[ "$VERIFY_RUN_ID" =~ ^[1-9][0-9]{0,15}$ ]] || exit 1
+          timeout 55s gh run watch "$VERIFY_RUN_ID" --repo Totoro-qaq/dsh-plugin-index --interval 5 --exit-status
       - name: Revalidate and merge only the checked candidate SHA
         env:
           GH_TOKEN: ${{ github.token }}
