@@ -62,3 +62,10 @@ test('automatic merging requires a successful verification workflow and never ch
   assert.match(source, /node src\/automation-cli\.mjs merge/);
   assert.doesNotMatch(source, /--admin|auto-approve|pull_request_target|secrets\.(?!GITHUB_TOKEN)/);
 });
+
+test('only the merge job may report a verified dispatch result back to the PR commit', async () => {
+  const merge = await workflow('merge-releases.yml');
+  assert.match(merge, /statuses: write/);
+  const checks = (await workflow('verify.yml')).split('\n  request-merge:')[0];
+  assert.doesNotMatch(checks, /statuses: write|contents: write|pull-requests: write/);
+});
