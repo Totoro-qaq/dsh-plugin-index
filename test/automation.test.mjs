@@ -1,9 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs/promises';
 import { generateIndex } from '../src/index.mjs';
 
-const config = JSON.parse(await fs.readFile(new URL('../plugins.json', import.meta.url), 'utf8'));
+// Synthetic releases must stay stable when the real market pins advance.
+const config = {
+  registry: 'https://registry.npmjs.org',
+  title: { en: 'Test market', zh: '测试市场' },
+  description: { en: 'Synthetic release fixtures', zh: '合成发布夹具' },
+  plugins: [
+    { name: 'dsh-jot', version: '0.2.13', title: { en: 'Jot', zh: '随记' }, description: { en: 'Local notes', zh: '本地笔记' } },
+    { name: 'dsh-plugin-bridge', version: '0.4.6', title: { en: 'Bridge', zh: '会话交接' }, description: { en: 'Session handoff', zh: '会话交接' } },
+  ],
+};
 const repository = 'Totoro-qaq/dsh-plugin-index';
 const base = `repos/${repository}`;
 const sha = letter => letter.repeat(40);
@@ -18,8 +26,10 @@ const load = async () => {
   return module;
 };
 
-async function fixture() {
-  const sources = Object.fromEntries(config.plugins.map((pin, i) => {
+async function fixture(versions = {}) {
+  const fixtureConfig = clone(config);
+  for (const pin of fixtureConfig.plugins) pin.version = versions[pin.name] ?? pin.version;
+  const sources = Object.fromEntries(fixtureConfig.plugins.map((pin, i) => {
     const sourceRepository = `Totoro-qaq/${pin.name}`;
     const version = pin.version;
     const manifest = { name: pin.name, version, engines: { dsh: '^0.2.1-alpha.1' }, dsh: { bundle: { patch: './cordis.patch.yml' } }, dist: { integrity: 'sha512-' + Buffer.alloc(64, i).toString('base64') } };
@@ -30,7 +40,7 @@ async function fixture() {
     assert.ok(source, 'only allowlisted npm metadata is read');
     return new Response(JSON.stringify(source.packument));
   };
-  const files = { 'plugins.json': serialize(config), 'index.json': serialize(await generateIndex(config, { fetchImpl })), 'README.md': 'prefix\n<!-- current-releases:start -->\nold table\n<!-- current-releases:end -->\nsuffix\n', 'releases.json': serialize({ schema: 1, packages: {} }) };
+  const files = { 'plugins.json': serialize(fixtureConfig), 'index.json': serialize(await generateIndex(fixtureConfig, { fetchImpl })), 'README.md': 'prefix\n<!-- current-releases:start -->\nold table\n<!-- current-releases:end -->\nsuffix\n', 'releases.json': serialize({ schema: 1, packages: {} }) };
   const state = { main: sha('a'), mergeBase: sha('a'), mainCode: sha('f'), candidateCode: sha('f'), tree: sha('b'), head: sha('c'), branch: null, pr: null, files, candidate: null, calls: [], compareFiles: null, commitAuthor: 'github-actions[bot]', extraTree: [], candidateMode: '100644', jobs: [{ name: 'verify', status: 'completed', conclusion: 'success', head_sha: sha('c') }], run: null, changedHead: false, changedMain: false, mainReads: 0, advanceMainAfter: null, mergeResult: { merged: true, sha: sha('7') }, afterMerge: false, branchShaAfterMerge: null, statusResponse: null };
   const tree = (commit) => {
     const candidate = commit === state.head;
@@ -106,6 +116,20 @@ test('creates only four deterministic metadata files and dispatches exact-head v
   assert.equal(result.headSha, state.head);
   assert.deepEqual(mutations(state).at(-1).body, { ref: result.branch, inputs: { pull_request: '7', head_sha: state.head } });
 });
+
+for (const [label, versions, expectedBranch] of [
+  ['historical', { 'dsh-jot': '0.2.13', 'dsh-plugin-bridge': '0.4.6' }, 'index/releases/jot-0.2.13_bridge-0.4.6'],
+  ['next', { 'dsh-jot': '0.2.14', 'dsh-plugin-bridge': '0.4.7' }, 'index/releases/jot-0.2.14_bridge-0.4.7'],
+  ['future', { 'dsh-jot': '1.2.3', 'dsh-plugin-bridge': '2.3.4' }, 'index/releases/jot-1.2.3_bridge-2.3.4'],
+]) {
+  test(`proposes the explicit ${label} fixture versions independently of published pins`, async () => {
+    const options = await fixture(versions);
+    const result = await (await load()).proposeUpdate(options);
+    assert.equal(result.branch, expectedBranch);
+    const candidate = JSON.parse(options.state.candidate['plugins.json']);
+    assert.deepEqual(Object.fromEntries(candidate.plugins.map(pin => [pin.name, pin.version])), versions);
+  });
+}
 
 test('is a read-only no-op once all metadata and receipts match main', async () => {
   const options = await proposed();
