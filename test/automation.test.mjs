@@ -107,6 +107,20 @@ test('creates only four deterministic metadata files and dispatches exact-head v
   assert.deepEqual(mutations(state).at(-1).body, { ref: result.branch, inputs: { pull_request: '7', head_sha: state.head } });
 });
 
+for (const [label, versions, expectedBranch] of [
+  ['historical', { 'dsh-jot': '0.2.13', 'dsh-plugin-bridge': '0.4.6' }, 'index/releases/jot-0.2.13_bridge-0.4.6'],
+  ['next', { 'dsh-jot': '0.2.14', 'dsh-plugin-bridge': '0.4.7' }, 'index/releases/jot-0.2.14_bridge-0.4.7'],
+  ['future', { 'dsh-jot': '1.2.3', 'dsh-plugin-bridge': '2.3.4' }, 'index/releases/jot-1.2.3_bridge-2.3.4'],
+]) {
+  test(`proposes the explicit ${label} fixture versions independently of published pins`, async () => {
+    const options = await fixture(versions);
+    const result = await (await load()).proposeUpdate(options);
+    assert.equal(result.branch, expectedBranch);
+    const candidate = JSON.parse(options.state.candidate['plugins.json']);
+    assert.deepEqual(Object.fromEntries(candidate.plugins.map(pin => [pin.name, pin.version])), versions);
+  });
+}
+
 test('is a read-only no-op once all metadata and receipts match main', async () => {
   const options = await proposed();
   options.state.files = clone(options.state.candidate);
