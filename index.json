@@ -72,14 +72,14 @@
       },
       "versions": [
         {
-          "version": "0.4.6",
-          "publishTimestamp": 1792121095,
+          "version": "0.4.7",
+          "publishTimestamp": 1792209878,
           "source": {
             "type": "npm",
             "registry": "https://registry.npmjs.org/"
           },
           "engines": {
-            "dsh": ">=0.1.0-rc.7 <0.2.0-0 || 0.2.0-rc.2 || 0.2.1-alpha.1 || 0.2.1-alpha.2 || 0.2.1-alpha.3 || 0.2.1-alpha.4"
+            "dsh": ">=0.1.0-rc.7 <0.2.0-0 || 0.2.0-rc.2 || >=0.2.1-alpha.1 <0.2.2-0"
           }
         }
       ]
