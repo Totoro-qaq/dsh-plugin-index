@@ -2,13 +2,13 @@
   "schema": 1,
   "packages": {
     "dsh-jot": {
-      "version": "0.2.13",
+      "version": "0.2.14",
       "repository": "Totoro-qaq/dsh-jot",
-      "tag": "v0.2.13",
-      "commit": "c4e8dae0a37d75ca9c8d12fd736ba48b6d7202b4",
-      "publishRunId": 38701356701,
-      "publishRunUrl": "https://github.com/Totoro-qaq/dsh-jot/actions/runs/38701356701",
-      "integrity": "sha512-e6BXxk4epSYenDC5DrMZQpoONOhZUgHpGMrwwjSeF7rgYRYn5L6Glgy11kUoai8wrFe05Yp7vkMJ9B1q96GbVA=="
+      "tag": "v0.2.14",
+      "commit": "cf2fbf0266f747a5a6ec8ea59e9dc5d03ceb5463",
+      "publishRunId": 38997821127,
+      "publishRunUrl": "https://github.com/Totoro-qaq/dsh-jot/actions/runs/38997821127",
+      "integrity": "sha512-CftQJZobkzo/D6WHa54dN2jHI2/S2JjXE4AXd52VdiE531/p5/5Bn3gJ+JLQIvDwbi53YDEw3ngbesUyjXtXrA=="
     },
     "dsh-plugin-bridge": {
       "version": "0.4.6",
