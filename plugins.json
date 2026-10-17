@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "dsh-jot",
-      "version": "0.2.13",
+      "version": "0.2.14",
       "title": {
         "en": "Jot",
         "zh": "随记 Jot"

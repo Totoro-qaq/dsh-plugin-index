@@ -23,10 +23,10 @@ https://raw.githubusercontent.com/Totoro-qaq/dsh-plugin-index/main/index.json
 
 | 插件 | 版本 | 用途 |
 | --- | --- | --- |
-| [随记 Jot](https://github.com/Totoro-qaq/dsh-jot) | `0.2.13` | 对话旁边的备忘录，支持文本、待办、表格、搜索、附件和导出。AI 协作默认关闭。 |
+| [随记 Jot](https://github.com/Totoro-qaq/dsh-jot) | `0.2.14` | 对话旁边的备忘录，支持文本、待办、表格、搜索、附件和导出。AI 协作默认关闭。 |
 | [Bridge](https://github.com/Totoro-qaq/dsh-plugin-bridge) | `0.4.6` | 预览、编辑交接摘要，再切换模式开启新会话；保留原会话，不搬运旧工具历史。 |
 
-安装目标固定为 `dsh-jot@0.2.13` 和 `dsh-plugin-bridge@0.4.6`，registry 为 `https://registry.npmjs.org/`。宿主兼容范围和发布时间从这两个确切版本的 npm 元数据读取，DSH 在安装时会再次检查兼容性。
+安装目标固定为 `dsh-jot@0.2.14` 和 `dsh-plugin-bridge@0.4.6`，registry 为 `https://registry.npmjs.org/`。宿主兼容范围和发布时间从这两个确切版本的 npm 元数据读取，DSH 在安装时会再次检查兼容性。
 
 <!-- current-releases:end -->
 
