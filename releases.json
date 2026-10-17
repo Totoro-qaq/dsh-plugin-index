@@ -11,13 +11,13 @@
       "integrity": "sha512-CftQJZobkzo/D6WHa54dN2jHI2/S2JjXE4AXd52VdiE531/p5/5Bn3gJ+JLQIvDwbi53YDEw3ngbesUyjXtXrA=="
     },
     "dsh-plugin-bridge": {
-      "version": "0.4.6",
+      "version": "0.4.7",
       "repository": "Totoro-qaq/dsh-plugin-bridge",
-      "tag": "v0.4.6",
-      "commit": "c16a1aafa5bbe8cdc636a1ce7a7cdefb06303fcd",
-      "publishRunId": 38845196430,
-      "publishRunUrl": "https://github.com/Totoro-qaq/dsh-plugin-bridge/actions/runs/38845196430",
-      "integrity": "sha512-bE1SDKPqt0+2f+HDhfSNLUvID50DcySo8+gQxtPu7YfHXj6p6peQuboa97ljUw+PQrhLvPWXnMkd1/e5hNJw1Q=="
+      "tag": "v0.4.7",
+      "commit": "6199772e3a9cb0ff0616cefb70f8f9c6b4caca6c",
+      "publishRunId": 39001036286,
+      "publishRunUrl": "https://github.com/Totoro-qaq/dsh-plugin-bridge/actions/runs/39001036286",
+      "integrity": "sha512-adB5EBP3t+2rZsh++SpJzyhutYI0aoxK683+gvPs39sWt/TNSkxk9wROhU10udHUffn7lJ2IENh9g1SrNoiD7w=="
     }
   }
 }

@@ -37,7 +37,7 @@
     },
     {
       "name": "dsh-plugin-bridge",
-      "version": "0.4.6",
+      "version": "0.4.7",
       "title": {
         "en": "Bridge",
         "zh": "Bridge 会话交接"
